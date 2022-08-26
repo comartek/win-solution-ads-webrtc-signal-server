@@ -46,26 +46,31 @@ httpServer.listen(port, () => {
 });
 const db = new Map<string, string>()
 const cmsDB = new Map<string, string>()
+
 io.on('connect', (socket)=>{
     // console.log("connect" ,socket.id);
     socket.on("pi-register", (deviceCode) =>{
         console.log("pi-register")
         db.set(deviceCode, socket.id)
     })
+    const signalClose = () => {
+      const piSocketId = cmsDB.get(socket.id)
+      if(piSocketId){
+         io.to(piSocketId).emit("cms-closed", socket.id)
+         cmsDB.set(socket.id, undefined)
+      }
+   }
     
-    socket.on("cms-register", (deviceCode) =>{
-        cmsDB.set(deviceCode, socket.id)
-    })
-    socket.on("disconnect", () => {
-        
-        io.to("socketIO").emit("cms-closed", socket.id)
-    })
+    socket.on("cms-closed", signalClose)
+    socket.on("disconnect",signalClose )
 
     socket.on('signal-offer', (data)=> {
-        console.log("signal-offer")
        const socketId = db.get(data.deviceId)
+       cmsDB.set(socket.id, socketId)
+       console.log("signal-offer to ", socketId)
        io.to(socketId).emit("offer-sdp", data.sdp, socket.id )
     })
+
     socket.on('signal-ice', (data)=> {
         console.log("signal-ice")
         const socketId = db.get(data.deviceId) 
