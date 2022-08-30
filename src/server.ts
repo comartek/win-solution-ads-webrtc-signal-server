@@ -11,7 +11,10 @@ import { createClient } from "redis";
 const redisCache = createClient();
 
 const port = process.env.APP_PORT || 5000;
+
 const cmsId = (id: string) => `SOCKET_${id}`;
+const devicePairingUser = (id: string) => `CALL_PAIRING_USER_${id}`;
+const devicePairingSocketId = (id: string) => `CALL_PAIRING_SOCKET_ID_${id}`;
 
 // const ca = fs.readFileSync(process.env.CA_PATH)
 // const key = fs.readFileSync(process.env.KEY_PATH)
@@ -50,11 +53,36 @@ io.on("connect", (socket) => {
     console.log("pi-register");
     redisCache.set(deviceCode, socket.id);
   });
+
+  socket.on("call-request", async (data) => {
+    const { deviceId, user } = data;
+    console.log("data ", data);
+    const pairer = await redisCache.get(devicePairingUser(deviceId));
+    console.log(" pairer ", pairer);
+
+    if (pairer) {
+      socket.emit("error-pi-busy", pairer);
+    } else {
+      socket.emit("call-request-allowed");
+      redisCache.set(devicePairingUser(deviceId), user);
+      redisCache.set(devicePairingSocketId(socket.id), deviceId);
+    }
+  });
+
   const signalClose = async () => {
+    console.log("closed ", socket.id);
     const piSocketId = await redisCache.get(cmsId(socket.id));
+    console.log("closed pi ", piSocketId);
     if (piSocketId) {
       io.to(piSocketId).emit("cms-closed", socket.id);
       redisCache.del(cmsId(socket.id));
+    }
+    const deviceId = await redisCache.get(devicePairingSocketId(socket.id));
+
+    console.log("device pi ", deviceId);
+    if (deviceId) {
+      redisCache.del(devicePairingUser(deviceId));
+      redisCache.del(devicePairingSocketId(socket.id));
     }
   };
 
