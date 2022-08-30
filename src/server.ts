@@ -63,11 +63,11 @@ io.on("connect", (socket) => {
 
   socket.on("signal-offer", async (data) => {
     const socketId = await redisCache.get(data.deviceId);
-   if(!socketId){
+    if (!socketId) {
       // un register
-      socket.emit("pi-not-ready")
-      return
-   }
+      socket.emit("pi-not-ready");
+      return;
+    }
     await redisCache.set(cmsId(socket.id), socketId);
     console.log("signal-offer to ", socketId);
     io.to(socketId).emit("offer-sdp", data.sdp, socket.id);
@@ -76,7 +76,7 @@ io.on("connect", (socket) => {
   socket.on("signal-ice", async (data) => {
     console.log("signal-ice");
     const socketId = await redisCache.get(data.deviceId);
-    io.to(socketId).emit("ice-candidate", data.candidate);
+    io.to(socketId).emit("signal-ice", data.candidate);
   });
 
   socket.on("signal-answer", (data) => {
