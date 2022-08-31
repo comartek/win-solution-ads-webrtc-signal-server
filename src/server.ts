@@ -81,6 +81,7 @@ io.on("connect", (socket) => {
 
     console.log("device pi ", deviceId);
     if (deviceId) {
+      redisCache.del(deviceId);
       redisCache.del(devicePairingUser(deviceId));
       redisCache.del(devicePairingSocketId(socket.id));
     }
