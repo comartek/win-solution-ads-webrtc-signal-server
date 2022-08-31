@@ -13,6 +13,7 @@ const redisCache = createClient();
 const port = process.env.APP_PORT || 5000;
 
 const cmsId = (id: string) => `SOCKET_${id}`;
+const piId = (id: string) => `SOCKET_PI_${id}`;
 const devicePairingUser = (id: string) => `CALL_PAIRING_USER_${id}`;
 const devicePairingSocketId = (id: string) => `CALL_PAIRING_SOCKET_ID_${id}`;
 
@@ -52,6 +53,7 @@ io.on("connect", (socket) => {
   socket.on("pi-register", (deviceCode) => {
     console.log("pi-register");
     redisCache.set(deviceCode, socket.id);
+    redisCache.set(piId(socket.id), deviceCode);
   });
 
   socket.on("call-request", async (data) => {
@@ -81,9 +83,13 @@ io.on("connect", (socket) => {
 
     console.log("device pi ", deviceId);
     if (deviceId) {
-      redisCache.del(deviceId);
       redisCache.del(devicePairingUser(deviceId));
       redisCache.del(devicePairingSocketId(socket.id));
+    }
+    const piDeviceId = await redisCache.get(piId(socket.id));
+    if (piDeviceId) {
+      redisCache.del(piId(socket.id));
+      redisCache.del(piDeviceId);
     }
   };
 
