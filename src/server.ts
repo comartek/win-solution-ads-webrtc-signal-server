@@ -59,13 +59,19 @@ io.on("connect", (socket) => {
   socket.on("call-request", async (data) => {
     const { deviceId, user } = data;
     console.log("data ", data);
+    const socketId = await redisCache.get(deviceId);
+    if (!socketId) {
+      // un register
+      socket.emit("pi-not-register", deviceId);
+      return;
+    }
     const pairer = await redisCache.get(devicePairingUser(deviceId));
     console.log(" pairer ", pairer);
 
     if (pairer) {
       socket.emit("error-pi-busy", pairer);
     } else {
-      socket.emit("call-request-allowed");
+      socket.emit("call-request-allowed", deviceId);
       redisCache.set(devicePairingUser(deviceId), user);
       redisCache.set(devicePairingSocketId(socket.id), deviceId);
     }
@@ -98,11 +104,6 @@ io.on("connect", (socket) => {
 
   socket.on("signal-offer", async (data) => {
     const socketId = await redisCache.get(data.deviceId);
-    if (!socketId) {
-      // un register
-      socket.emit("pi-not-ready");
-      return;
-    }
     await redisCache.set(cmsId(socket.id), socketId);
     console.log("signal-offer to ", socketId);
     io.to(socketId).emit("offer-sdp", data.sdp, socket.id);
