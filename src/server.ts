@@ -98,7 +98,9 @@ io.on("connect", (socket) => {
       redisCache.del(piDeviceId);
     }
   };
-
+  socket.on("pi-close-pc", (deviceId) => {
+    console.log("pi-close-pc ", deviceId);
+  });
   socket.on("cms-closed", signalClose);
   socket.on("disconnect", signalClose);
 
