@@ -94,6 +94,7 @@ io.on("connect", (socket) => {
     }
     const piDeviceId = await redisCache.get(piId(socket.id));
     if (piDeviceId) {
+      console.log("pi disconnect", piDeviceId);
       redisCache.del(piId(socket.id));
       redisCache.del(piDeviceId);
     }
