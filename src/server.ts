@@ -69,6 +69,10 @@ io.on("connect", (socket) => {
 
     if (pairer) {
       socket.emit("error-pi-busy", pairer);
+    } else {
+      socket.emit("call-request-allowed", deviceId); // emit for cms
+      redisCache.set(devicePairingUser(deviceId), user);
+      redisCache.set(devicePairingSocketId(socket.id), deviceId);
     }
     /* else {
       // start nego process
@@ -99,6 +103,8 @@ io.on("connect", (socket) => {
     if (deviceId) {
       redisCache.del(devicePairingUser(deviceId));
       redisCache.del(devicePairingSocketId(socket.id));
+      const piSocketId = await redisCache.get(deviceId);
+      io.to(piSocketId).emit("cms-closed", socket.id);
     }
     // when pi-device disconnect
     if (piDeviceId) {
