@@ -55,12 +55,15 @@ io.on("connect", (socket) => {
     redisCache.set(deviceCode, socket.id);
     redisCache.set(piId(socket.id), deviceCode);
   });
-
+  socket.on("cms-waiting-call", async ({ pi, cms }) => {
+    const piSocketId = await redisCache.get(pi);
+    io.to(piSocketId).emit("cms-waiting-call", cms);
+  });
   socket.on("call-request", async (data) => {
     const { deviceId, user } = data;
     console.log("data ", data);
-    const socketId = await redisCache.get(deviceId);
-    if (!socketId) {
+    const piSocketId = await redisCache.get(deviceId);
+    if (!piSocketId) {
       // un register
       socket.emit("pi-not-register", deviceId);
       return;
@@ -71,7 +74,9 @@ io.on("connect", (socket) => {
     if (pairer) {
       socket.emit("error-pi-busy", pairer);
     } else {
-      socket.emit("call-request-allowed", deviceId);
+      // start nego process
+      socket.emit("call-request-allowed", deviceId); // emit for cms
+      io.to(piSocketId).emit("start-nego", socket.id); // emit for pi device
       redisCache.set(devicePairingUser(deviceId), user);
       redisCache.set(devicePairingSocketId(socket.id), deviceId);
     }
